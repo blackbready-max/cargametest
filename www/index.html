@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#18352D" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>АВТО — Мобильная Игра-Викторина</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #0d1d18;
+      --accent-orange: #F18121;
+      --accent-orange-dark: #d96d12;
+      --road-sand: #CCA36E;
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-deep);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .font-question {
+      font-family: 'Oswald', 'Inter', sans-serif;
+      letter-spacing: 0.01em;
+      line-height: 1.18;
+    }
+
+    /* Аппаратное ускорение для плавных 60 FPS */
+    .gpu-layer {
+      will-change: transform;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    /* Анимация встряхивания при попытке ответить без выбора */
+    @keyframes shakeError {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .shake-anim {
+      animation: shakeError 0.35s ease-in-out;
+    }
+
+    /* Стили скроллбара для модальных окон */
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 999px;
+    }
+
+    /* Ползунки в настройках */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #F18121;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center w-screen h-screen overflow-hidden bg-[#0c1a16]">
+
+  <!-- Внешняя обертка: на ПК отображает стильный мобильный экран по центру (или во весь экран по кнопке), на смартфоне занимает 100% экрана -->
+  <div id="app-shell" class="relative w-full h-full sm:max-w-[420px] sm:h-[min(96vh,875px)] sm:rounded-[34px] sm:shadow-[0_28px_80px_rgba(0,0,0,0.75)] sm:border-[5px] sm:border-stone-800/90 overflow-hidden flex flex-col justify-between transition-all duration-300 bg-[#CCA36E]">
+
+    <!-- ==================== ФОНОВАЯ АНИМИРОВАННАЯ SVG-СЦЕНА С МАСЛКАРОМ ==================== -->
+    <div class="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+      <svg id="scene-svg" class="w-full h-full block" viewBox="55 135 890 1580" preserveAspectRatio="xMidYMin slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- Мягкий ореол вокруг луны -->
+          <radialGradient id="moon-halo-grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#D6EEF8" stop-opacity="0.32" />
+            <stop offset="45%" stop-color="#B8D8E8" stop-opacity="0.14" />
+            <stop offset="100%" stop-color="#B8D8E8" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Многоступенчатый золотистый ореол вокруг линз передних фар -->
+          <radialGradient id="headlight-halo-grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FFFDF2" stop-opacity="0.95" />
+            <stop offset="28%" stop-color="#FFE89E" stop-opacity="0.75" />
+            <stop offset="60%" stop-color="#FFAE38" stop-opacity="0.32" />
+            <stop offset="100%" stop-color="#FF9419" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Яркое раскаленное ядро линзы фары -->
+          <radialGradient id="headlight-core-grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+            <stop offset="55%" stop-color="#FFF5C8" stop-opacity="0.92" />
+            <stop offset="85%" stop-color="#FFCA57" stop-opacity="0.45" />
+            <stop offset="100%" stop-color="#FFCA57" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Мягкая частица дорожной пыли -->
+          <radialGradient id="dust-puff-grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#E5C89B" stop-opacity="0.85" />
+            <stop offset="55%" stop-color="#DEC092" stop-opacity="0.4" />
+            <stop offset="100%" stop-color="#DEC092" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Градиент ночного неба -->
+          <linearGradient id="night-sky-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#040A11" />
+            <stop offset="55%" stop-color="#0A1724" />
+            <stop offset="100%" stop-color="#102530" />
+          </linearGradient>
+
+          <!-- Градиент дальнего конуса правой (дальней) фары -->
+          <linearGradient id="headlight-beam-far" x1="160" y1="552" x2="-240" y2="715" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#FFF9DF" stop-opacity="0.68" />
+            <stop offset="28%" stop-color="#FFE49E" stop-opacity="0.36" />
+            <stop offset="70%" stop-color="#F6C86E" stop-opacity="0.12" />
+            <stop offset="100%" stop-color="#F6C86E" stop-opacity="0" />
+          </linearGradient>
+
+          <!-- Градиент ближнего конуса левой (ближней) фары -->
+          <linearGradient id="headlight-beam-near" x1="398" y1="602" x2="-190" y2="855" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#FFFBEF" stop-opacity="0.78" />
+            <stop offset="25%" stop-color="#FFE7A8" stop-opacity="0.44" />
+            <stop offset="68%" stop-color="#F6C86E" stop-opacity="0.15" />
+            <stop offset="100%" stop-color="#F6C86E" stop-opacity="0" />
+          </linearGradient>
+
+          <!-- Радиальный градиент светового пятна на полотне дороги перед авто -->
+          <radialGradient id="road-light-pool" cx="35%" cy="42%" r="60%">
+            <stop offset="0%" stop-color="#FFF3C4" stop-opacity="0.52" />
+            <stop offset="50%" stop-color="#F5CA7B" stop-opacity="0.22" />
+            <stop offset="100%" stop-color="#F5CA7B" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Радиальный градиент отсвета заднего красного фонаря на земле позади кормы -->
+          <radialGradient id="taillight-glow-grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FF3B1F" stop-opacity="0.65" />
+            <stop offset="50%" stop-color="#E01E08" stop-opacity="0.24" />
+            <stop offset="100%" stop-color="#E01E08" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Градиент ночного затенения окружения -->
+          <linearGradient id="night-env-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#040B12" stop-opacity="0.72" />
+            <stop offset="35%" stop-color="#07131E" stop-opacity="0.68" />
+            <stop offset="100%" stop-color="#0A131C" stop-opacity="0.78" />
+          </linearGradient>
+
+          <!-- Маска травяного склона -->
+          <clipPath id="grass-bank-clip">
+            <polygon points="-400,603 1400,3 1400,159 -400,759" />
+          </clipPath>
+
+          <!-- Шаблоны деревьев -->
+          <g id="bg-pine-silhouette">
+            <polygon points="0,-390 -90,120 0,120" fill="#112620" />
+            <polygon points="0,-390 90,120 0,120" fill="#1B3830" />
+          </g>
+
+          <g id="tree-ground-shadow-lg">
+            <polygon points="-140,47 16,-5 22,5 -125,54" fill="#2A3927" opacity="0.65" />
+          </g>
+          <g id="tree-ground-shadow-md">
+            <polygon points="-105,35 14,-4 18,4 -92,41" fill="#2A3927" opacity="0.55" />
+          </g>
+          <g id="tree-ground-shadow-trunk">
+            <polygon points="-165,55 42,-14 46,6 -145,66" fill="#273624" opacity="0.7" />
+          </g>
+
+          <g id="tree-green-tall">
+            <polygon points="0,-495 -94,-42 0,-42" fill="#102822" />
+            <polygon points="0,-495 126,-42 0,-42" fill="#2A4B3C" />
+            <path d="M-13,2 L-9,-335 L4,-335 L13,2 Z" fill="#3B2316" />
+            <polygon points="-8,-202 -44,-246 -36,-253 -6,-218" fill="#3B2316" />
+            <polygon points="5,-138 50,-198 43,-204 2,-156" fill="#3B2316" />
+            <ellipse cx="0" cy="1" rx="18" ry="4.5" fill="#263624" />
+          </g>
+
+          <g id="tree-ochre-tall">
+            <polygon points="0,-425 -85,-52 0,-52" fill="#7A4924" />
+            <polygon points="0,-425 112,-52 0,-52" fill="#9E7856" />
+            <path d="M-12,2 L-5,-310 L4,-310 L12,2 Z" fill="#532814" />
+            <polygon points="-4,-152 -42,-200 -36,-206 -2,-168" fill="#532814" />
+            <polygon points="3,-204 36,-242 31,-248 2,-218" fill="#532814" />
+            <polygon points="5,-114 50,-166 43,-172 3,-130" fill="#532814" />
+            <ellipse cx="0" cy="1" rx="16" ry="4" fill="#263624" />
+          </g>
+
+          <g id="tree-pine-dark">
+            <polygon points="0,-405 -82,-46 0,-46" fill="#0E221D" />
+            <polygon points="0,-405 114,-46 0,-46" fill="#1C382F" />
+            <path d="M-12,2 L-10,-52 L10,-52 L12,2 Z" fill="#162B24" />
+            <ellipse cx="0" cy="1" rx="16" ry="4" fill="#243423" />
+          </g>
+
+          <g id="tree-thick-trunk">
+            <polygon points="-42,-680 42,-680 40,3 -42,3" fill="#602F17" />
+            <polygon points="4,-580 42,-640 42,-500 -2,-430 -2,-515" fill="#7A4421" />
+            <polygon points="42,-455 42,-350 -6,-280 -6,-360" fill="#7A4421" />
+            <polygon points="-4,-245 42,-315 40,2 -6,2" fill="#7A4421" />
+            <polygon points="36,-198 88,-262 81,-268 34,-222" fill="#68381B" />
+            <ellipse cx="-1" cy="2" rx="46" ry="7" fill="#263624" />
+          </g>
+
+          <g id="tree-ochre-med">
+            <polygon points="0,-335 -86,-44 0,-44" fill="#7A4924" />
+            <polygon points="0,-335 92,-44 0,-44" fill="#9E7856" />
+            <path d="M-10,2 L-4,-265 L4,-265 L10,2 Z" fill="#532814" />
+            <polygon points="-3,-140 -34,-170 -29,-176 -2,-152" fill="#532814" />
+            <polygon points="3,-180 34,-210 29,-216 2,-192" fill="#532814" />
+            <polygon points="4,-102 40,-140 34,-146 2,-116" fill="#532814" />
+            <ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#263624" />
+          </g>
+
+          <g id="tree-pine-med">
+            <polygon points="0,-325 -76,-40 0,-40" fill="#10251F" />
+            <polygon points="0,-325 86,-40 0,-40" fill="#1E3C31" />
+            <path d="M-10,2 L-9,-46 L9,-46 L10,2 Z" fill="#132822" />
+            <ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#243423" />
+          </g>
+
+          <!-- Слои бесшовного тайла (L = 1200px, dy = -400px, SLOPE = -1/3) -->
+          <g id="forest-far-tile">
+            <use href="#bg-pine-silhouette" transform="translate(40, 481.7) scale(1.05)" />
+            <use href="#bg-pine-silhouette" transform="translate(190, 431.7) scale(0.92)" />
+            <use href="#bg-pine-silhouette" transform="translate(340, 381.7) scale(1.12)" />
+            <use href="#bg-pine-silhouette" transform="translate(500, 328.3) scale(0.98)" />
+            <use href="#bg-pine-silhouette" transform="translate(650, 278.3) scale(1.08)" />
+            <use href="#bg-pine-silhouette" transform="translate(800, 228.3) scale(0.94)" />
+            <use href="#bg-pine-silhouette" transform="translate(950, 178.3) scale(1.10)" />
+            <use href="#bg-pine-silhouette" transform="translate(1100, 128.3) scale(0.96)" />
+          </g>
+
+          <g id="shadows-mid-tile">
+            <use href="#tree-ground-shadow-md" transform="translate(150, 478)" />
+            <use href="#tree-ground-shadow-lg" transform="translate(375, 403)" />
+            <use href="#tree-ground-shadow-md" transform="translate(690, 298)" />
+            <use href="#tree-ground-shadow-md" transform="translate(945, 213)" />
+            <use href="#tree-ground-shadow-lg" transform="translate(1125, 153)" />
+          </g>
+
+          <g id="shadows-front-tile">
+            <use href="#tree-ground-shadow-lg" transform="translate(84, 539)" />
+            <use href="#tree-ground-shadow-lg" transform="translate(231, 490)" />
+            <use href="#tree-ground-shadow-trunk" transform="translate(546, 385)" />
+            <use href="#tree-ground-shadow-md" transform="translate(816, 295)" />
+            <use href="#tree-ground-shadow-md" transform="translate(1035, 222)" />
+          </g>
+
+          <g id="forest-mid-tile">
+            <use href="#tree-pine-med" transform="translate(150, 478) scale(0.94)" />
+            <use href="#tree-pine-dark" transform="translate(375, 403)" />
+            <use href="#tree-pine-med" transform="translate(690, 298)" />
+            <use href="#tree-pine-med" transform="translate(945, 213) scale(0.92)" />
+            <use href="#tree-ochre-med" transform="translate(1125, 153) scale(0.95)" />
+          </g>
+
+          <g id="forest-front-tile">
+            <use href="#tree-ochre-med" transform="translate(1035, 222)" />
+            <use href="#tree-ochre-med" transform="translate(816, 295)" />
+            <use href="#tree-thick-trunk" transform="translate(546, 385)" />
+            <use href="#tree-ochre-tall" transform="translate(231, 490)" />
+            <use href="#tree-green-tall" transform="translate(84, 539)" />
+          </g>
+
+          <g id="grass-details-tile">
+            <polygon points="60,555 150,525 156,531 66,561" fill="#445433" opacity="0.7" />
+            <polygon points="310,455 415,420 420,426 315,461" fill="#445433" opacity="0.7" />
+            <polygon points="610,365 715,330 720,336 615,371" fill="#445433" opacity="0.7" />
+            <polygon points="870,272 960,242 965,248 875,278" fill="#445433" opacity="0.7" />
+          </g>
+
+          <g id="road-details-tile">
+            <g fill="#B98E57" opacity="0.58">
+              <polygon points="45,790 135,760 139,764 49,794" />
+              <polygon points="240,860 360,820 364,824 244,864" />
+              <polygon points="480,745 555,720 558,724 483,749" />
+              <polygon points="690,640 789,607 793,611 694,644" />
+              <polygon points="860,710 950,680 954,684 864,714" />
+              <polygon points="150,655 216,633 219,637 153,659" />
+              <polygon points="570,565 645,540 648,544 573,569" />
+              <polygon points="940,515 1030,485 1034,489 944,519" />
+              <polygon points="390,925 495,890 499,894 394,929" />
+              <polygon points="780,835 885,800 889,804 784,839" />
+            </g>
+            <g fill="#D8B27E" opacity="0.55">
+              <circle cx="110" cy="830" r="3" />
+              <circle cx="310" cy="755" r="2.5" />
+              <circle cx="520" cy="810" r="3.5" />
+              <circle cx="670" cy="710" r="2.8" />
+              <circle cx="840" cy="595" r="3" />
+              <circle cx="980" cy="630" r="3.2" />
+              <circle cx="210" cy="910" r="3" />
+              <circle cx="630" cy="885" r="2.8" />
+            </g>
+          </g>
+        </defs>
+
+        <!-- 1. НЕБО И ДАЛЬНИЙ ЛЕС -->
+        <rect x="-200" y="0" width="1500" height="2200" fill="#18352D" />
+
+        <!-- Ночное небо со звездами и полумесяцем (включается на 10 вопросе) -->
+        <g id="night-sky-layer" opacity="0" style="transition: opacity 0.6s ease;">
+          <rect x="-200" y="0" width="1500" height="700" fill="url(#night-sky-grad)" />
+          <circle cx="210" cy="215" r="72" fill="url(#moon-halo-grad)" />
+          <path d="M 200,186 A 26,26 0 1,0 228,230 A 21,21 0 1,1 200,186 Z" fill="#EBF6FA" opacity="0.92" />
+          <g id="night-stars" fill="#E8F4F8">
+            <circle cx="125" cy="165" r="1.8" opacity="0.8" />
+            <circle cx="285" cy="158" r="2.1" opacity="0.9" />
+            <circle cx="360" cy="210" r="1.5" opacity="0.7" />
+            <circle cx="465" cy="170" r="1.9" opacity="0.85" />
+            <circle cx="620" cy="152" r="1.7" opacity="0.75" />
+            <circle cx="715" cy="192" r="2.2" opacity="0.95" />
+            <circle cx="840" cy="164" r="1.6" opacity="0.7" />
+            <circle cx="910" cy="182" r="1.9" opacity="0.8" />
+            <circle cx="395" cy="258" r="1.5" opacity="0.65" />
+            <circle cx="585" cy="228" r="1.7" opacity="0.7" />
+            <circle cx="155" cy="295" r="1.5" opacity="0.6" />
+          </g>
+        </g>
+
+        <!-- Дальний параллакс-слой леса -->
+        <g id="parallax-far" class="gpu-layer"></g>
+
+        <!-- 2. ТРАВЯНОЙ СКЛОН И СЛОИ ЛЕСА -->
+        <polygon points="-400,603 1400,3 1400,200 -400,800" fill="#51603C" />
+        <polygon points="-400,603 1400,3 1400,38 -400,638" fill="#465534" />
+
+        <g id="parallax-grass" class="gpu-layer"></g>
+
+        <g clip-path="url(#grass-bank-clip)">
+          <g id="parallax-shadows-mid" class="gpu-layer"></g>
+          <g id="parallax-shadows-front" class="gpu-layer"></g>
+        </g>
+
+        <g id="parallax-mid" class="gpu-layer"></g>
+        <g id="parallax-front" class="gpu-layer"></g>
+
+        <!-- 3. ДОРОГА (продлена вниз до y=2200 для мобильных экранов любой высоты) -->
+        <polygon points="-200,692.7 1200,226 1200,2200 -200,2200" fill="#CCA36E" />
+        <polygon points="-200,692.7 1200,226 1200,232 -200,698.7" fill="#B68D58" opacity="0.65" />
+
+        <g id="parallax-road" class="gpu-layer"></g>
+        <g id="dust-layer"></g>
+
+        <!-- Ночное затенение окружения -->
+        <rect id="evening-overlay" x="-200" y="0" width="1500" height="2200" fill="url(#night-env-grad)" opacity="0" pointer-events="none" style="transition: opacity 0.6s ease;" />
+
+        <!-- 4. АВТОМОБИЛЬ -->
+        <g id="car-master" class="gpu-layer">
+          <g id="road-night-lighting" opacity="0" pointer-events="none" style="transition: opacity 0.6s ease;">
+            <ellipse cx="45" cy="742" rx="340" ry="105" transform="rotate(-18.43 45 742)" fill="url(#road-light-pool)" />
+            <ellipse cx="918" cy="488" rx="78" ry="29" transform="rotate(-18.43 918 488)" fill="url(#taillight-glow-grad)" />
+          </g>
+
+          <path id="car-shadow"
+            d="M 59,683 L 208,628 L 855,498 L 913,511 L 815,557 L 504,703 Q 352,739 332,736 L 59,683 Z"
+            fill="#3D2417" />
+
+          <g id="car-underbody">
+            <path d="M 185,608 L 485,668 L 825,518 L 865,478 L 450,555 Z" fill="#351A0F" />
+            <path d="M 448,664 C 444,580 478,546 534,548 C 570,550 580,590 568,628 Z" fill="#2E150B" />
+            <path d="M 768,534 C 768,468 795,435 837,438 C 865,440 872,474 862,505 Z" fill="#2E150B" />
+          </g>
+
+          <g id="wheel-front-right">
+            <path d="M 200,628 Q 232,653 270,644 L 272,622 L 198,612 Z" fill="#3B1E12" />
+          </g>
+
+          <g id="wheel-rear">
+            <path d="M 792,452 L 824,448 L 808,557 L 774,544 C 762,515 768,472 792,452 Z" fill="#3B1E12" />
+            <g transform="translate(820, 503) rotate(12)">
+              <ellipse cx="0" cy="0" rx="33" ry="53" fill="#4B2515" />
+              <ellipse cx="4" cy="1" rx="20" ry="37" fill="#E5C48B" />
+              <ellipse cx="-1" cy="0" rx="16" ry="31" fill="#8A623A" />
+              <g transform="scale(0.52, 1)">
+                <g id="rear-wheel-spinner">
+                  <line x1="-26" y1="0" x2="26" y2="0" stroke="#6E4A26" stroke-width="5" />
+                  <line x1="0" y1="-26" x2="0" y2="26" stroke="#6E4A26" stroke-width="5" />
+                  <line x1="-18" y1="-18" x2="18" y2="18" stroke="#A67B4E" stroke-width="3.5" />
+                  <line x1="-18" y1="18" x2="18" y2="-18" stroke="#5A391E" stroke-width="3.5" />
+                </g>
+                <g id="rear-wheel-blur" opacity="0">
+                  <circle cx="0" cy="0" r="20" fill="none" stroke="#B88E5A" stroke-width="4" stroke-dasharray="28 14" />
+                  <circle cx="0" cy="0" r="12" fill="none" stroke="#6E4A26" stroke-width="3.5" stroke-dasharray="16 10" />
+                </g>
+              </g>
+              <ellipse cx="0" cy="0" rx="5.5" ry="10" fill="#5A391E" />
+              <ellipse cx="1" cy="0" rx="2.5" ry="4.5" fill="#D5B88B" />
+            </g>
+          </g>
+
+          <g id="wheel-front">
+            <path d="M 482,570 L 522,566 L 502,703 L 456,685 C 440,645 452,592 482,570 Z" fill="#3B1E12" />
+            <g transform="translate(512, 635) rotate(12)">
+              <ellipse cx="0" cy="0" rx="43" ry="67" fill="#4B2515" />
+              <ellipse cx="5" cy="2" rx="26" ry="45" fill="#E5C48B" />
+              <ellipse cx="-2" cy="0" rx="21" ry="38" fill="#8A623A" />
+              <g transform="scale(0.55, 1)">
+                <g id="front-wheel-spinner">
+                  <line x1="-32" y1="0" x2="32" y2="0" stroke="#6E4A26" stroke-width="6" />
+                  <line x1="0" y1="-32" x2="0" y2="32" stroke="#6E4A26" stroke-width="6" />
+                  <line x1="-22" y1="-22" x2="22" y2="22" stroke="#A67B4E" stroke-width="4" />
+                  <line x1="-22" y1="22" x2="22" y2="-22" stroke="#5A391E" stroke-width="4" />
+                </g>
+                <g id="front-wheel-blur" opacity="0">
+                  <circle cx="0" cy="0" r="25" fill="none" stroke="#B88E5A" stroke-width="5" stroke-dasharray="34 16" />
+                  <circle cx="0" cy="0" r="15" fill="none" stroke="#6E4A26" stroke-width="4" stroke-dasharray="20 12" />
+                </g>
+              </g>
+              <ellipse cx="0" cy="0" rx="7" ry="13" fill="#5A391E" />
+              <ellipse cx="1.5" cy="0" rx="3.2" ry="6" fill="#E5C48B" />
+            </g>
+          </g>
+
+          <g id="car-body">
+            <path d="M 135,526 L 405,574 L 909,401 C 914,418 902,452 885,472 L 858,492 C 862,458 848,438 824,440 C 796,442 778,472 774,528 L 564,616 C 568,574 552,552 522,554 C 486,556 462,592 454,666 C 425,672 392,670 355,660 L 164,612 C 145,595 138,560 135,526 Z" fill="#C85E18" />
+            <path d="M 135,526 C 148,512 195,494 362,435 L 432,353 C 510,316 615,314 736,332 C 762,337 785,352 805,368 L 882,379 L 898,372 L 909,402 L 412,576 L 135,526 Z" fill="#F18121" />
+            <polygon points="366,435 452,450 242,554 172,536" fill="#C6601A" />
+            <polygon points="546,480 336,566 368,570 546,480" fill="#BA5516" />
+            <polygon points="752,462 778,452 767,516 749,520" fill="#A84912" />
+            <polygon points="434,356 626,381 596,474 363,436" fill="#5E2715" />
+            <polygon points="434,356 508,366 495,405 378,435" fill="#7A6832" />
+            <polygon points="508,366 525,368 505,408 495,405" fill="#4E2514" />
+            <polygon points="522,371 544,373 516,396" fill="#6E6032" />
+            <polygon points="613,468 640,387 645,456" fill="#5E2715" />
+            <polygon points="647,384 725,358 735,420 652,453" fill="#5E2715" />
+            <polygon points="733,358 780,403 742,417" fill="#5E2715" />
+            <polygon points="640,386 646,384 652,453 645,456" fill="#D5B88B" />
+            <polygon points="725,358 732,358 742,417 735,420" fill="#D5B88B" />
+            <path d="M 135,526 L 415,576 L 424,634 L 144,574 Z" fill="#85481B" />
+            <ellipse cx="400" cy="601" rx="21" ry="22" transform="rotate(-10 400 601)" fill="#6B3714" />
+            <path d="M 176,540 L 334,580 C 344,583 350,606 346,615 L 182,575 C 175,565 173,548 176,540 Z" fill="#351B0F" />
+            <ellipse id="headlight-left" cx="159" cy="553" rx="10.5" ry="17" transform="rotate(-16 159 553)" fill="#F4D399" />
+            <ellipse id="headlight-right" cx="400" cy="601" rx="15.5" ry="18.5" transform="rotate(-10 400 601)" fill="#F5D59B" />
+            <path d="M 136,568 Q 255,612 396,634 L 446,624 C 452,626 452,636 445,640 L 394,648 Q 250,624 136,584 Z" fill="#9B7753" />
+            <path d="M 136,568 Q 255,612 396,634 L 446,624 L 445,630 L 395,639 Q 253,616 136,574 Z" fill="#B08960" />
+
+            <!-- Ночной режим кузова и фар -->
+            <g id="car-night-effects" opacity="0" pointer-events="none" style="transition: opacity 0.6s ease;">
+              <path d="M 135,526 C 148,512 195,494 362,435 L 432,353 C 510,316 615,314 736,332 C 762,337 785,352 805,368 L 882,379 L 898,372 L 909,402 C 914,418 902,452 885,472 L 858,492 C 862,458 848,438 824,440 C 796,442 778,472 774,528 L 564,616 C 568,574 552,552 522,554 C 486,556 462,592 454,666 C 425,672 392,670 355,660 L 164,612 C 145,595 138,560 135,526 Z" fill="#07131E" opacity="0.52" />
+              <ellipse cx="160" cy="553" rx="16" ry="22" transform="rotate(-16 160 553)" fill="#FFAE42" opacity="0.55" />
+              <ellipse cx="400" cy="601" rx="23" ry="25" transform="rotate(-10 400 601)" fill="#FFAE42" opacity="0.55" />
+              <path d="M 136,568 Q 255,612 396,634 L 446,624 L 445,629 L 395,638 Q 253,615 136,573 Z" fill="#FFE39F" opacity="0.75" />
+
+              <g id="headlight-beams">
+                <polygon points="156,536 -260,625 -260,795 156,570" fill="url(#headlight-beam-far)" opacity="0.55" />
+                <polygon points="158,543 -260,652 -260,752 158,563" fill="url(#headlight-beam-far)" opacity="0.85" />
+                <polygon points="396,583 -260,735 -105,975 390,620" fill="url(#headlight-beam-near)" opacity="0.55" />
+                <polygon points="398,591 -260,765 -150,925 392,613" fill="url(#headlight-beam-near)" opacity="0.88" />
+              </g>
+
+              <g>
+                <ellipse cx="159" cy="553" rx="34" ry="44" transform="rotate(-16 159 553)" fill="url(#headlight-halo-grad)" />
+                <ellipse cx="159" cy="553" rx="16" ry="24" transform="rotate(-16 159 553)" fill="url(#headlight-core-grad)" />
+                <ellipse cx="159" cy="553" rx="7.5" ry="12.5" transform="rotate(-16 159 553)" fill="#FFFFFF" />
+                <polygon points="122,561 159,550 196,545 159,556" fill="#FFFFFF" opacity="0.9" />
+                <polygon points="154,522 161,553 164,584 157,553" fill="#FFF7D6" opacity="0.75" />
+              </g>
+
+              <g>
+                <ellipse cx="400" cy="601" rx="48" ry="54" transform="rotate(-10 400 601)" fill="url(#headlight-halo-grad)" />
+                <ellipse cx="400" cy="601" rx="22" ry="26" transform="rotate(-10 400 601)" fill="url(#headlight-core-grad)" />
+                <ellipse cx="400" cy="601" rx="11" ry="13.5" transform="rotate(-10 400 601)" fill="#FFFFFF" />
+                <polygon points="350,612 400,597 450,590 400,605" fill="#FFFFFF" opacity="0.95" />
+                <polygon points="394,562 403,601 406,640 397,601" fill="#FFF7D6" opacity="0.8" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <!-- ==================== ВЕРХНЯЯ ПАНЕЛЬ (ИКОНКИ + БЕЛАЯ НАВИГАЦИОННАЯ ПЛАШКА КАК В 51.PNG) ==================== -->
+    <header class="relative z-10 px-4 pt-3 pb-1 flex flex-col gap-2.5 shrink-0">
+      <!-- Верхний ряд иконок: Шестеренка слева, Звук справа -->
+      <div class="flex items-center justify-between px-0.5">
+        <button id="settings-btn" type="button" aria-label="Настройки и GitHub Actions"
+          class="w-9 h-9 rounded-full flex items-center justify-center text-white/95 hover:text-white hover:bg-black/25 active:scale-95 transition">
+          <!-- Иконка шестеренки в стиле 51.png -->
+          <svg class="w-6 h-6 drop-shadow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+
+        <!-- Индикатор текущей скорости и режима (ненавязчивый чип между иконками) -->
+        <div id="telemetry-pill" class="px-3 py-1 rounded-full bg-black/35 backdrop-blur-md border border-white/15 text-[11px] font-semibold text-amber-100 flex items-center gap-1.5 shadow-sm">
+          <span id="mode-indicator-icon">☀️</span>
+          <span id="speed-indicator-text">60 КМ/Ч</span>
+        </div>
+
+        <button id="mute-btn" type="button" aria-label="Включить или выключить звук"
+          class="w-9 h-9 rounded-full flex items-center justify-center text-white/95 hover:text-white hover:bg-black/25 active:scale-95 transition">
+          <!-- Иконка звука выкл (как в 51.png) -->
+          <svg id="icon-sound-off" class="w-6 h-6 drop-shadow" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path d="M22 9l-6 6M16 9l6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>
+          </svg>
+          <!-- Иконка звука вкл -->
+          <svg id="icon-sound-on" class="w-6 h-6 drop-shadow hidden" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Белая навигационная плашка: НАЗАД | АВТО | ВОПРОС X -->
+      <div class="bg-white rounded-[10px] px-4 py-2.5 shadow-[0_6px_20px_rgba(0,0,0,0.18)] flex items-center justify-between">
+        <button id="back-btn" type="button"
+          class="text-[13px] font-medium text-[#374151] hover:text-[#F18121] active:scale-95 transition uppercase tracking-wide min-w-[68px] text-left">
+          НАЗАД
+        </button>
+        <span class="text-[14px] font-extrabold text-[#1F2937] uppercase tracking-wider">
+          АВТО
+        </span>
+        <span id="question-counter" class="text-[13px] font-medium text-[#374151] uppercase tracking-wide min-w-[68px] text-right">
+          ВОПРОС 1
+        </span>
+      </div>
+    </header>
+
+    <!-- Свободное окно обзора автомобиля в верхней половине экрана + уведомление о выезде за кадр -->
+    <div class="relative z-10 flex-1 flex flex-col justify-end items-center px-4 pb-2 pointer-events-none">
+      <div id="departure-banner" class="hidden mb-2 px-4 py-2 rounded-2xl bg-stone-950/85 backdrop-blur-md border border-amber-400/40 text-amber-200 text-xs font-bold tracking-wider uppercase shadow-xl animate-pulse">
+        🏁 Все ответы даны! Автомобиль уходит за горизонт...
+      </div>
+    </div>
+
+    <!-- ==================== НИЖНЯЯ БЕЛАЯ КАРТОЧКА ВИКТОРИНЫ (ТОЧНО КАК В 51.PNG) ==================== -->
+    <main class="relative z-10 px-4 pb-4 shrink-0">
+
+      <!-- ЭКРАН ВОПРОСОВ -->
+      <section id="quiz-card" class="bg-white rounded-[22px] px-5 pt-5 pb-5 shadow-[0_14px_40px_rgba(0,0,0,0.22)] flex flex-col justify-between min-h-[455px] sm:min-h-[470px] transition-all duration-300">
+
+        <div>
+          <!-- Прогресс-бар вверху карточки -->
+          <div class="w-full h-[3.5px] bg-[#E5E7EB] rounded-full overflow-hidden mb-5">
+            <div id="progress-bar" class="h-full bg-[#F18121] rounded-full transition-all duration-300" style="width: 10%;"></div>
+          </div>
+
+          <!-- Текст вопроса крупным капсом -->
+          <h1 id="question-text" class="font-question text-[22px] sm:text-[24px] font-bold text-[#262626] uppercase mb-4 min-h-[78px] flex items-center">
+            КАКАЯ ИЗ ЭТИХ МАРОК ВХОДИТ В СОСТАВ VOLKSWAGEN GROUP?
+          </h1>
+        </div>
+
+        <!-- Сетка 2x2 с вариантами ответов A, B, C, D -->
+        <div id="options-grid" class="grid grid-cols-2 gap-3 my-auto">
+          <!-- Карточка A -->
+          <button type="button" data-index="0" class="option-btn group text-left rounded-[12px] border-[1.5px] border-[#E2E2E2] bg-white p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150 hover:border-[#F18121]/60 active:scale-[0.98]">
+            <span class="opt-letter text-[14px] font-bold text-[#262626] leading-tight mb-1">A</span>
+            <span class="opt-label text-[14px] font-semibold text-[#333333] uppercase leading-snug break-words">FIAT</span>
+          </button>
+
+          <!-- Карточка B -->
+          <button type="button" data-index="1" class="option-btn group text-left rounded-[12px] border-[1.5px] border-[#E2E2E2] bg-white p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150 hover:border-[#F18121]/60 active:scale-[0.98]">
+            <span class="opt-letter text-[14px] font-bold text-[#262626] leading-tight mb-1">B</span>
+            <span class="opt-label text-[14px] font-semibold text-[#333333] uppercase leading-snug break-words">AUDI</span>
+          </button>
+
+          <!-- Карточка C -->
+          <button type="button" data-index="2" class="option-btn group text-left rounded-[12px] border-[1.5px] border-[#E2E2E2] bg-white p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150 hover:border-[#F18121]/60 active:scale-[0.98]">
+            <span class="opt-letter text-[14px] font-bold text-[#262626] leading-tight mb-1">C</span>
+            <span class="opt-label text-[14px] font-semibold text-[#333333] uppercase leading-snug break-words">RENAULT</span>
+          </button>
+
+          <!-- Карточка D -->
+          <button type="button" data-index="3" class="option-btn group text-left rounded-[12px] border-[1.5px] border-[#E2E2E2] bg-white p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150 hover:border-[#F18121]/60 active:scale-[0.98]">
+            <span class="opt-letter text-[14px] font-bold text-[#262626] leading-tight mb-1">D</span>
+            <span class="opt-label text-[14px] font-semibold text-[#333333] uppercase leading-snug break-words">PEUGEOT</span>
+          </button>
+        </div>
+
+        <!-- Подсказка / статус ответа -->
+        <div id="feedback-bar" class="min-h-[22px] mt-2 mb-2 text-center text-[12px] font-semibold text-stone-500 transition-opacity duration-200">
+          Выберите вариант ответа и нажмите «Ответить»
+        </div>
+
+        <!-- Кнопка ОТВЕТИТЬ -->
+        <button id="submit-btn" type="button"
+          class="w-full py-3.5 rounded-[10px] bg-[#F18121] hover:bg-[#e07012] active:scale-[0.99] text-white font-bold text-[14px] uppercase tracking-wider shadow-[0_4px_14px_rgba(241,129,33,0.38)] transition">
+          ОТВЕТИТЬ
+        </button>
+      </section>
+
+      <!-- ЭКРАН РЕЗУЛЬТАТОВ (ПОСЛЕ 10 ВОПРОСА И ОТЪЕЗДА АВТОМОБИЛЯ ЗА КАДР) -->
+      <section id="result-card" class="hidden bg-white rounded-[22px] px-5 pt-5 pb-5 shadow-[0_14px_40px_rgba(0,0,0,0.28)] flex-col justify-between min-h-[455px] sm:min-h-[470px] transition-all duration-300">
+        <div>
+          <div class="w-full h-[3.5px] bg-[#10B981] rounded-full overflow-hidden mb-4"></div>
+
+          <div class="flex items-center justify-between mb-2">
+            <span class="px-2.5 py-1 rounded-full bg-orange-100 text-[#F18121] text-[11px] font-bold uppercase tracking-wider">
+              Ночной финиш • 300 км/ч
+            </span>
+            <span id="car-status-badge" class="text-[11px] font-semibold text-stone-500">
+              🏁 Авто уехало за кадр
+            </span>
+          </div>
+
+          <h2 class="font-question text-[26px] font-bold text-[#262626] uppercase mb-1">
+            ЗАЕЗД ЗАВЕРШЕН!
+          </h2>
+          <p id="result-rank-text" class="text-[13px] font-medium text-stone-600 mb-4">
+            Отличный результат! Вы отлично разбираетесь в автомобилях.
+          </p>
+
+          <!-- Сводка очков и скорости -->
+          <div class="grid grid-cols-3 gap-2.5 mb-4">
+            <div class="rounded-xl bg-stone-100 p-3 text-center">
+              <div class="text-[11px] font-semibold text-stone-500 uppercase">Счёт</div>
+              <div id="final-score-val" class="text-[20px] font-extrabold text-[#262626]">10 / 10</div>
+            </div>
+            <div class="rounded-xl bg-stone-100 p-3 text-center">
+              <div class="text-[11px] font-semibold text-stone-500 uppercase">Точность</div>
+              <div id="final-accuracy-val" class="text-[20px] font-extrabold text-[#F18121]">100%</div>
+            </div>
+            <div class="rounded-xl bg-stone-100 p-3 text-center">
+              <div class="text-[11px] font-semibold text-stone-500 uppercase">Макс. скор.</div>
+              <div class="text-[20px] font-extrabold text-emerald-600">300</div>
+            </div>
+          </div>
+
+          <!-- Краткий список ответов -->
+          <div id="answers-summary-list" class="max-h-[150px] overflow-y-auto custom-scroll border border-stone-200 rounded-xl p-2.5 space-y-1.5 mb-4 bg-stone-50/60">
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <div class="flex gap-2">
+            <button id="toggle-car-return-btn" type="button"
+              class="flex-1 py-2.5 px-3 rounded-[10px] border border-stone-300 hover:bg-stone-100 text-[#262626] font-bold text-[12px] uppercase tracking-wider transition">
+              ↩ Вернуть авто в кадр
+            </button>
+            <button id="open-ci-from-results-btn" type="button"
+              class="py-2.5 px-3 rounded-[10px] border border-stone-300 hover:bg-stone-100 text-[#262626] font-bold text-[12px] uppercase tracking-wider transition">
+              ⚙️ GitHub Actions
+            </button>
+          </div>
+          <button id="restart-btn" type="button"
+            class="w-full py-3.5 rounded-[10px] bg-[#F18121] hover:bg-[#e07012] active:scale-[0.99] text-white font-bold text-[14px] uppercase tracking-wider shadow-[0_4px_14px_rgba(241,129,33,0.38)] transition">
+            ИГРАТЬ СНОВА
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ==================== МОДАЛЬНОЕ ОКНО НАСТРОЕК И GITHUB ACTIONS CI/CD ==================== -->
+    <div id="settings-modal" class="hidden absolute inset-0 z-30 bg-black/65 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div class="bg-white w-full max-h-[88%] rounded-[24px] p-5 shadow-2xl flex flex-col justify-between overflow-hidden">
+        <!-- Шапка модального окна -->
+        <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+          <div class="flex gap-2">
+            <button id="tab-settings-btn" type="button" class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#F18121] text-white transition">
+              Настройки
+            </button>
+            <button id="tab-cicd-btn" type="button" class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-700 hover:bg-stone-200 transition">
+              GitHub Actions APK
+            </button>
+          </div>
+          <button id="close-settings-btn" type="button" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 font-bold text-sm">
+            ✕
+          </button>
+        </div>
+
+        <!-- Вкладка 1: Настройки игры и физики автомобиля -->
+        <div id="tab-settings-content" class="py-4 space-y-4 overflow-y-auto custom-scroll text-sm text-stone-700">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-bold text-stone-900">Звук двигателя V8 и эффекты</div>
+              <div class="text-xs text-stone-500">Синтез звука мотора Web Audio API</div>
+            </div>
+            <button id="modal-sound-toggle" type="button" class="px-3.5 py-1.5 rounded-lg font-bold text-xs uppercase bg-stone-200 text-stone-700 transition">
+              Выкл
+            </button>
+          </div>
+
+          <div>
+            <div class="flex justify-between font-bold text-stone-900 text-xs mb-1">
+              <span>Мягкость подвески автомобиля</span>
+              <span id="bounce-val-label" class="text-[#F18121]">100%</span>
+            </div>
+            <input id="bounce-range" type="range" min="0" max="200" step="10" value="100" class="w-full" />
+          </div>
+
+          <div>
+            <div class="font-bold text-stone-900 text-xs mb-1.5">Режим времени суток</div>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" data-lightmode="auto" class="lightmode-btn py-2 rounded-lg text-xs font-bold border-2 border-[#F18121] bg-orange-50 text-[#F18121]">
+                Авто (10 раунд)
+              </button>
+              <button type="button" data-lightmode="day" class="lightmode-btn py-2 rounded-lg text-xs font-bold border border-stone-200 text-stone-600">
+                День
+              </button>
+              <button type="button" data-lightmode="night" class="lightmode-btn py-2 rounded-lg text-xs font-bold border border-stone-200 text-stone-600">
+                Ночь + Фары
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-stone-200 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-stone-900 text-xs">Тест маневра автомобиля</div>
+              <div class="text-[11px] text-stone-500">Проверка выезда за кадр и возврата</div>
+            </div>
+            <button id="modal-drive-btn" type="button" class="px-3 py-1.5 rounded-lg bg-orange-100 hover:bg-orange-200 text-[#F18121] font-bold text-xs transition">
+              🏁 Уехать / Вернуть
+            </button>
+          </div>
+
+          <div class="pt-2 border-t border-stone-200 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-stone-900 text-xs">Формат экрана (на ПК)</div>
+              <div class="text-[11px] text-stone-500">Мобильный корпус или на весь экран</div>
+            </div>
+            <button id="modal-fullscreen-btn" type="button" class="px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs transition">
+              Смартфон / Экран
+            </button>
+          </div>
+        </div>
+
+        <!-- Вкладка 2: Конфигурация автосборки GitHub Actions -->
+        <div id="tab-cicd-content" class="hidden py-3 space-y-3 overflow-y-auto custom-scroll text-xs text-stone-700">
+          <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-stone-800">
+            <div class="font-bold text-amber-900 mb-1">🚀 Готовая автосборка (GitHub Actions)</div>
+            <p class="leading-relaxed text-[11px] text-stone-600">
+              При каждом <code class="bg-white px-1 rounded">git push</code> воркфлоу автоматически собирает <strong>Android APK</strong> (через Capacitor + Android SDK) и публикует мобильную веб-версию на <strong>GitHub Pages</strong>.
+            </p>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-stone-900">.github/workflows/build.yml</span>
+              <button id="copy-workflow-btn" type="button" class="px-2.5 py-1 rounded bg-[#F18121] text-white font-bold text-[11px] hover:bg-[#e07012] transition">
+                Копировать YAML
+              </button>
+            </div>
+            <pre id="workflow-code-block" class="p-2.5 rounded-xl bg-stone-900 text-emerald-300 font-mono text-[10px] leading-relaxed overflow-x-auto max-h-[210px] custom-scroll select-all">name: Build Mobile Auto Quiz (Android APK &amp; GitHub Pages)
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-android-and-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Capacitor &amp; Generate Android Project
+        run: |
+          npm install
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Build Debug APK via Gradle
+        working-directory: ./android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-quiz-android-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload GitHub Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./www
+
+  deploy-pages:
+    needs: build-android-and-web
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4</pre>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-stone-200 flex justify-end">
+          <button id="done-settings-btn" type="button" class="w-full py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs uppercase tracking-wider transition">
+            Готово
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ==================== 10 ВОПРОСОВ НА АВТОМОБИЛЬНУЮ ТЕМАТИКУ ====================
+      // Вопрос 4 в точности повторяет референс 51.png (Какая из этих марок входит в состав Volkswagen Group? -> AUDI)
+      const QUESTIONS = [
+        {
+          question: 'КАКАЯ СТРАНА ЯВЛЯЕТСЯ РОДИНОЙ АВТОМОБИЛЬНОЙ МАРКИ TOYOTA?',
+          options: ['ЮЖНАЯ КОРЕЯ', 'ЯПОНИЯ', 'ГЕРМАНИЯ', 'США'],
+          correct: 1,
+          speedKmh: 60
+        },
+        {
+          question: 'КАКОЕ ЖИВОТНОЕ ИЗОБРАЖЕНО НА ЗНАМЕНИТОЙ ЭМБЛЕМЕ МАРКИ FERRARI?',
+          options: ['РАЗЪЯРЕННЫЙ БЫК', 'ГАРЦУЮЩИЙ ЖЕРЕБЕЦ', 'ЗОЛОТОЙ ЛЕВ', 'ЧЕРНЫЙ ЯГУАР'],
+          correct: 1,
+          speedKmh: 85
+        },
+        {
+          question: 'КАК НАЗЫВАЕТСЯ ЛЕГЕНДАРНЫЙ МАСЛКАР FORD, ВПЕРВЫЕ ВЫПУЩЕННЫЙ В 1964 ГОДУ?',
+          options: ['CAMARO', 'CHARGER', 'MUSTANG', 'CORVETTE'],
+          correct: 2,
+          speedKmh: 110
+        },
+        {
+          question: 'КАКАЯ ИЗ ЭТИХ МАРОК ВХОДИТ В СОСТАВ VOLKSWAGEN GROUP?',
+          options: ['FIAT', 'AUDI', 'RENAULT', 'PEUGEOT'],
+          correct: 1,
+          speedKmh: 135
+        },
+        {
+          question: 'ЧТО ИЗМЕРЯЕТ ТАХОМЕТР НА ПРИБОРНОЙ ПАНЕЛИ АВТОМОБИЛЯ?',
+          options: ['СКОРОСТЬ АВТО', 'ДАВЛЕНИЕ В ШИНАХ', 'ОБОРОТЫ ДВИГАТЕЛЯ', 'УРОВЕНЬ ТОПЛИВА'],
+          correct: 2,
+          speedKmh: 165
+        },
+        {
+          question: 'КАКАЯ КОМПАНИЯ СОЗДАЛА ЛЕГЕНДАРНЫЙ СПОРТКАР 911 С ЗАДНЕМОТОРНОЙ КОМПОНОВКОЙ?',
+          options: ['PORSCHE', 'MERCEDES-BENZ', 'BMW', 'ASTON MARTIN'],
+          correct: 0,
+          speedKmh: 190
+        },
+        {
+          question: 'КАК РАСШИФРОВЫВАЕТСЯ АББРЕВИАТУРА ТОРМОЗНОЙ СИСТЕМЫ ABS?',
+          options: ['АВТОБАЛАНС СТОЕК', 'АНТИБЛОКИРОВОЧНАЯ СИСТЕМА', 'АКТИВНЫЙ БЛОК СТАРТА', 'АДАПТИВНЫЙ БУСТЕР'],
+          correct: 1,
+          speedKmh: 220
+        },
+        {
+          question: 'В КАКОМ НЕМЕЦКОМ ГОРОДЕ НАХОДИТСЯ ШТАБ-КВАРТИРА И ГЛАВНЫЙ МУЗЕЙ BMW?',
+          options: ['ШТУТГАРТ', 'ВОЛЬФСБУРГ', 'МЮНХЕН', 'ИНГОЛЬШТАДТ'],
+          correct: 2,
+          speedKmh: 245
+        },
+        {
+          question: 'В КАКОМ ТИПЕ ДВИГАТЕЛЯ ТОПЛИВО ВОСПЛАМЕНЯЕТСЯ ОТ СЖАТИЯ БЕЗ СВЕЧЕЙ ЗАЖИГАНИЯ?',
+          options: ['РОТОРНЫЙ', 'ДИЗЕЛЬНЫЙ', 'КАРБЮРАТОРНЫЙ', 'ОППОЗИТНЫЙ'],
+          correct: 1,
+          speedKmh: 275
+        },
+        {
+          question: 'КАКОЙ ГИПЕРКАР ПЕРВЫМ ПРЕОДОЛЕЛ РУБЕЖ СКОРОСТИ 490 КМ/Ч НА ТРЕКЕ ЭРА-ЛЕССИН?',
+          options: ['BUGATTI CHIRON SUPER SPORT', 'PAGANI HUAYRA', 'FERRARI LAFERRARI', 'MCLAREN P1'],
+          correct: 0,
+          speedKmh: 300
+        }
+      ];
+
+      // ==================== СОСТОЯНИЕ ИГРЫ И ФИЗИКИ АВТОМОБИЛЯ ====================
+      const LOOP_WIDTH = 1200;
+      const SLOPE = -1 / 3;
+
+      const state = {
+        currentQuestionIndex: 0,
+        selectedOption: null,
+        isAnswered: false,
+        userAnswers: new Array(QUESTIONS.length).fill(null),
+        quizCompleted: false,
+
+        // Физика и анимация авто
+        speedKmh: 60,
+        targetSpeedKmh: 60,
+        bounceScale: 1.0,
+        lightModeOverride: 'auto', // 'auto' | 'day' | 'night'
+        lightsOn: false,
+        soundOn: false,
+        fullScreenShell: false,
+
+        scrollFar: 0,
+        scrollMid: 0,
+        scrollFront: 0,
+        scrollRoad: 0,
+        wheelAngle: 0,
+        time: 0,
+
+        // Маневр выезда за кадр ('cruising' | 'departing' | 'away' | 'returning')
+        driveMode: 'cruising',
+        carOffsetX: 0,
+        carVelX: 0,
+        maneuverPitch: 0,
+        maneuverSquatY: 0,
+        lastBlurOpacity: -1,
+        dustIdleHidden: false
+      };
+
+      // ==================== DOM-ЭЛЕМЕНТЫ ====================
+      const appShell = document.getElementById('app-shell');
+      const parallaxFar = document.getElementById('parallax-far');
+      const parallaxMid = document.getElementById('parallax-mid');
+      const parallaxFront = document.getElementById('parallax-front');
+      const parallaxShadowsMid = document.getElementById('parallax-shadows-mid');
+      const parallaxShadowsFront = document.getElementById('parallax-shadows-front');
+      const parallaxGrass = document.getElementById('parallax-grass');
+      const parallaxRoad = document.getElementById('parallax-road');
+      const dustLayer = document.getElementById('dust-layer');
+
+      const carMaster = document.getElementById('car-master');
+      const carBody = document.getElementById('car-body');
+      const carUnderbody = document.getElementById('car-underbody');
+      const carShadow = document.getElementById('car-shadow');
+      const wheelFront = document.getElementById('wheel-front');
+      const wheelRear = document.getElementById('wheel-rear');
+      const wheelFrontRight = document.getElementById('wheel-front-right');
+      const frontSpinner = document.getElementById('front-wheel-spinner');
+      const rearSpinner = document.getElementById('rear-wheel-spinner');
+      const frontWheelBlur = document.getElementById('front-wheel-blur');
+      const rearWheelBlur = document.getElementById('rear-wheel-blur');
+      const nightStars = document.getElementById('night-stars');
+
+      const nightSkyLayer = document.getElementById('night-sky-layer');
+      const eveningOverlay = document.getElementById('evening-overlay');
+      const roadNightLighting = document.getElementById('road-night-lighting');
+      const carNightEffects = document.getElementById('car-night-effects');
+
+      // Элементы интерфейса викторины
+      const settingsBtn = document.getElementById('settings-btn');
+      const muteBtn = document.getElementById('mute-btn');
+      const iconSoundOff = document.getElementById('icon-sound-off');
+      const iconSoundOn = document.getElementById('icon-sound-on');
+      const modeIndicatorIcon = document.getElementById('mode-indicator-icon');
+      const speedIndicatorText = document.getElementById('speed-indicator-text');
+      const backBtn = document.getElementById('back-btn');
+      const questionCounter = document.getElementById('question-counter');
+      const departureBanner = document.getElementById('departure-banner');
+
+      const quizCard = document.getElementById('quiz-card');
+      const progressBar = document.getElementById('progress-bar');
+      const questionText = document.getElementById('question-text');
+      const optionBtns = Array.from(document.querySelectorAll('.option-btn'));
+      const feedbackBar = document.getElementById('feedback-bar');
+      const submitBtn = document.getElementById('submit-btn');
+
+      const resultCard = document.getElementById('result-card');
+      const carStatusBadge = document.getElementById('car-status-badge');
+      const resultRankText = document.getElementById('result-rank-text');
+      const finalScoreVal = document.getElementById('final-score-val');
+      const finalAccuracyVal = document.getElementById('final-accuracy-val');
+      const answersSummaryList = document.getElementById('answers-summary-list');
+      const toggleCarReturnBtn = document.getElementById('toggle-car-return-btn');
+      const openCiFromResultsBtn = document.getElementById('open-ci-from-results-btn');
+      const restartBtn = document.getElementById('restart-btn');
+
+      // Модальное окно
+      const settingsModal = document.getElementById('settings-modal');
+      const closeSettingsBtn = document.getElementById('close-settings-btn');
+      const doneSettingsBtn = document.getElementById('done-settings-btn');
+      const tabSettingsBtn = document.getElementById('tab-settings-btn');
+      const tabCicdBtn = document.getElementById('tab-cicd-btn');
+      const tabSettingsContent = document.getElementById('tab-settings-content');
+      const tabCicdContent = document.getElementById('tab-cicd-content');
+      const modalSoundToggle = document.getElementById('modal-sound-toggle');
+      const bounceRange = document.getElementById('bounce-range');
+      const bounceValLabel = document.getElementById('bounce-val-label');
+      const lightmodeBtns = Array.from(document.querySelectorAll('.lightmode-btn'));
+      const modalDriveBtn = document.getElementById('modal-drive-btn');
+      const modalFullscreenBtn = document.getElementById('modal-fullscreen-btn');
+      const copyWorkflowBtn = document.getElementById('copy-workflow-btn');
+      const workflowCodeBlock = document.getElementById('workflow-code-block');
+
+      function safeSetAttr(el, attr, val) {
+        if (el) el.setAttribute(attr, val);
+      }
+
+      // ==================== ИНИЦИАЛИЗАЦИЯ ПАРАЛЛАКС-СЛОЕВ И ПЫЛИ ====================
+      function setupParallaxLayer(container, templateId) {
+        if (!container) return null;
+        for (let i = -1; i <= 1; i++) {
+          const useEl = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+          useEl.setAttribute('href', '#' + templateId);
+          const tileX = i * LOOP_WIDTH;
+          const tileY = tileX * SLOPE;
+          useEl.setAttribute('transform', 'translate(' + tileX + ', ' + tileY + ')');
+          container.appendChild(useEl);
+        }
+        return container;
+      }
+
+      const farLayer = setupParallaxLayer(parallaxFar, 'forest-far-tile');
+      const shadowsMidLayer = setupParallaxLayer(parallaxShadowsMid, 'shadows-mid-tile');
+      const shadowsFrontLayer = setupParallaxLayer(parallaxShadowsFront, 'shadows-front-tile');
+      const midLayer = setupParallaxLayer(parallaxMid, 'forest-mid-tile');
+      const frontLayer = setupParallaxLayer(parallaxFront, 'forest-front-tile');
+      const grassLayer = setupParallaxLayer(parallaxGrass, 'grass-details-tile');
+      const roadLayer = setupParallaxLayer(parallaxRoad, 'road-details-tile');
+
+      function updateLayerPosition(layerEl, offset) {
+        if (!layerEl) return;
+        const x = ((offset % LOOP_WIDTH) + LOOP_WIDTH) % LOOP_WIDTH;
+        const y = x * SLOPE;
+        layerEl.setAttribute('transform', 'translate(' + x.toFixed(2) + ', ' + y.toFixed(2) + ')');
+      }
+
+      const dustParticles = [];
+      const MAX_DUST = 12;
+
+      function initDust() {
+        if (!dustLayer) return;
+        for (let i = 0; i < MAX_DUST; i++) {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', '0');
+          circle.setAttribute('cy', '0');
+          circle.setAttribute('r', '10');
+          circle.setAttribute('fill', 'url(#dust-puff-grad)');
+          circle.setAttribute('class', 'gpu-layer');
+          circle.setAttribute('opacity', '0');
+          dustLayer.appendChild(circle);
+          dustParticles.push({
+            el: circle,
+            x: 0,
+            y: 0,
+            r: 3.5,
+            life: Math.random(),
+            maxLife: 0.65 + Math.random() * 0.45,
+            source: i % 2 === 0 ? 'front' : 'rear'
+          });
+        }
+      }
+      initDust();
+
+      function updateDust(dt, speedFactor) {
+        const isLaunching = state.driveMode === 'departing';
+        const carVisible = state.carOffsetX > -1150 && state.carOffsetX < 1150;
+        const activeDust = (speedFactor > 0.08 || isLaunching) && carVisible;
+
+        if (!activeDust) {
+          if (!state.dustIdleHidden) {
+            for (let i = 0; i < dustParticles.length; i++) {
+              safeSetAttr(dustParticles[i].el, 'opacity', '0');
+            }
+            state.dustIdleHidden = true;
+          }
+          return;
+        }
+        state.dustIdleHidden = false;
+
+        const boostFactor = isLaunching ? 2.5 : 1.0;
+        const carX = state.carOffsetX;
+        const carY = carX * SLOPE;
+
+        for (let i = 0; i < dustParticles.length; i++) {
+          const p = dustParticles[i];
+          p.life += dt * (0.7 + speedFactor * 0.85 * boostFactor);
+
+          if (p.life >= p.maxLife) {
+            p.life = 0;
+            if (p.source === 'front') {
+              p.x = 535 + carX + (Math.random() - 0.5) * 14;
+              p.y = 668 + carY + (Math.random() - 0.5) * 8;
+            } else {
+              p.x = 838 + carX + (Math.random() - 0.5) * 14;
+              p.y = 532 + carY + (Math.random() - 0.5) * 7;
+            }
+            p.r = (2.8 + Math.random() * 4.5) * (isLaunching ? 1.5 : 1.0);
+          }
+
+          const progress = p.life / p.maxLife;
+          const moveDist = speedFactor * 410 * dt;
+          p.x += moveDist;
+          p.y += moveDist * SLOPE - dt * 14;
+
+          const scale = (p.r * (1 + progress * 1.9)) / 10;
+          const alpha = Math.sin(progress * Math.PI) * (isLaunching ? 0.46 : 0.28) * Math.min(1.25, speedFactor + (isLaunching ? 0.8 : 0));
+
+          safeSetAttr(
+            p.el,
+            'transform',
+            'translate(' + p.x.toFixed(1) + ', ' + p.y.toFixed(1) + ') scale(' + scale.toFixed(2) + ')'
+          );
+          safeSetAttr(p.el, 'opacity', Math.max(0, alpha).toFixed(2));
+        }
+      }
+
+      // ==================== ЗВУКОВОЙ ДВИЖОК (WEB AUDIO API V8 + UI SFX) ====================
+      let audioCtx = null;
+      let engineGain = null;
+      let osc1 = null;
+      let osc2 = null;
+
+      function ensureAudioContext() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+        if (!audioCtx) {
+          audioCtx = new AudioContextClass();
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 180;
+
+          engineGain = audioCtx.createGain();
+          engineGain.gain.value = 0.0001;
+
+          osc1 = audioCtx.createOscillator();
+          osc2 = audioCtx.createOscillator();
+          osc1.type = 'sawtooth';
+          osc2.type = 'triangle';
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(engineGain);
+          engineGain.connect(audioCtx.destination);
+
+          osc1.start();
+          osc2.start();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      }
+
+      function playUiSound(type) {
+        if (!state.soundOn) return;
+        try {
+          const ctx = ensureAudioContext();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          if (type === 'select') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(520, now);
+            osc.frequency.exponentialRampToValueAtTime(680, now + 0.06);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+            osc.start(now);
+            osc.stop(now + 0.07);
+          } else if (type === 'correct') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.08);
+            osc.frequency.setValueAtTime(783.99, now + 0.16);
+            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+            osc.start(now);
+            osc.stop(now + 0.33);
+          } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.linearRampToValueAtTime(150, now + 0.22);
+            gain.gain.setValueAtTime(0.11, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.26);
+          } else if (type === 'finish') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.35);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            osc.start(now);
+            osc.stop(now + 0.46);
+          }
+        } catch (e) {}
+      }
+
+      function updateSoundUI() {
+        if (state.soundOn) {
+          iconSoundOff.classList.add('hidden');
+          iconSoundOn.classList.remove('hidden');
+          modalSoundToggle.textContent = 'Вкл';
+          modalSoundToggle.className = 'px-3.5 py-1.5 rounded-lg font-bold text-xs uppercase bg-[#F18121] text-white transition';
+        } else {
+          iconSoundOff.classList.remove('hidden');
+          iconSoundOn.classList.add('hidden');
+          modalSoundToggle.textContent = 'Выкл';
+          modalSoundToggle.className = 'px-3.5 py-1.5 rounded-lg font-bold text-xs uppercase bg-stone-200 text-stone-700 transition';
+        }
+      }
+
+      function toggleSound() {
+        try {
+          state.soundOn = !state.soundOn;
+          if (state.soundOn) {
+            ensureAudioContext();
+            if (engineGain && audioCtx) {
+              engineGain.gain.setTargetAtTime(0.11, audioCtx.currentTime, 0.1);
+            }
+            playUiSound('select');
+          } else {
+            if (engineGain && audioCtx) {
+              engineGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.08);
+            }
+          }
+          updateSoundUI();
+        } catch (e) {
+          state.soundOn = false;
+          updateSoundUI();
+        }
+      }
+
+      function updateEngineAudio(speedKmh, bounceOffset) {
+        if (!state.soundOn || !audioCtx || !osc1 || !osc2 || !engineGain) return;
+        try {
+          const launchRpmBoost = state.driveMode === 'departing'
+            ? Math.min(110, Math.abs(state.carVelX) * 0.06)
+            : state.driveMode === 'returning'
+              ? Math.min(50, Math.abs(state.carVelX) * 0.03)
+              : 0;
+
+          const distAttenuation = Math.max(0.08, 1 - Math.abs(state.carOffsetX) / 1550);
+          engineGain.gain.setTargetAtTime(0.11 * distAttenuation, audioCtx.currentTime, 0.08);
+
+          const baseFreq = 38 + (speedKmh / 300) * 120 + launchRpmBoost + bounceOffset * 0.6;
+          osc1.frequency.setTargetAtTime(baseFreq, audioCtx.currentTime, 0.05);
+          osc2.frequency.setTargetAtTime(baseFreq * 1.5, audioCtx.currentTime, 0.05);
+        } catch (e) {}
+      }
+
+      // ==================== УПРАВЛЕНИЕ СВЕТОМ (ДЕНЬ / НОЧЬ НА 10 РАУНДЕ) ====================
+      function applyLightState() {
+        let shouldBeNight = false;
+        if (state.lightModeOverride === 'night') {
+          shouldBeNight = true;
+        } else if (state.lightModeOverride === 'day') {
+          shouldBeNight = false;
+        } else {
+          // В режиме 'auto': 10-й вопрос (индекс 9) и экран финиша — НОЧЬ!
+          shouldBeNight = (state.currentQuestionIndex === QUESTIONS.length - 1) || state.quizCompleted;
+        }
+
+        state.lightsOn = shouldBeNight;
+        const nightVal = shouldBeNight ? '1' : '0';
+        safeSetAttr(nightSkyLayer, 'opacity', nightVal);
+        safeSetAttr(eveningOverlay, 'opacity', nightVal);
+        safeSetAttr(roadNightLighting, 'opacity', nightVal);
+        safeSetAttr(carNightEffects, 'opacity', nightVal);
+
+        if (modeIndicatorIcon) {
+          modeIndicatorIcon.textContent = shouldBeNight ? '🌙' : '☀️';
+        }
+      }
+
+      // ==================== УПРАВЛЕНИЕ МАНЕВРОМ ВЫЕЗДА АВТОМОБИЛЯ ЗА КАДР ====================
+      function syncCarStatusUI() {
+        if (carStatusBadge) {
+          if (state.driveMode === 'departing' || state.driveMode === 'away') {
+            carStatusBadge.textContent = '🏁 Авто уехало за кадр';
+          } else {
+            carStatusBadge.textContent = '🚗 Авто снова в кадре';
+          }
+        }
+        if (toggleCarReturnBtn) {
+          if (state.driveMode === 'departing' || state.driveMode === 'away') {
+            toggleCarReturnBtn.textContent = '↩ Вернуть авто в кадр';
+          } else {
+            toggleCarReturnBtn.textContent = '🏁 Уехать за кадр';
+          }
+        }
+      }
+
+      function departCarOffscreen() {
+        state.driveMode = 'departing';
+        state.carVelX = -220;
+        syncCarStatusUI();
+      }
+
+      function returnCarToFrame() {
+        if (state.driveMode === 'away' || state.driveMode === 'departing') {
+          state.driveMode = 'returning';
+          state.carOffsetX = 1380;
+          state.carVelX = -1250;
+          syncCarStatusUI();
+        }
+      }
+
+      function toggleCarManeuverManual() {
+        if (state.driveMode === 'cruising' || state.driveMode === 'returning') {
+          departCarOffscreen();
+        } else {
+          returnCarToFrame();
+        }
+      }
+
+      function updateCarManeuver(dt) {
+        let targetPitch = 0;
+        let targetSquatY = 0;
+
+        if (state.driveMode === 'departing') {
+          state.carVelX -= 2250 * dt;
+          state.carOffsetX += state.carVelX * dt;
+
+          targetPitch = 0.98;
+          targetSquatY = 2.5;
+
+          if (state.carOffsetX <= -1480) {
+            state.carOffsetX = -1480;
+            state.carVelX = 0;
+            state.driveMode = 'away';
+            syncCarStatusUI();
+          }
+        } else if (state.driveMode === 'returning') {
+          const distanceToHome = state.carOffsetX;
+          const desiredSpeed = -Math.max(45, distanceToHome * 3.5);
+          state.carVelX += (desiredSpeed - state.carVelX) * Math.min(1, dt * 8.5);
+          state.carOffsetX += state.carVelX * dt;
+
+          if (distanceToHome < 420 && distanceToHome > 15) {
+            targetPitch = -0.48 * (distanceToHome / 420);
+            targetSquatY = 0.8;
+          }
+
+          if (state.carOffsetX <= 1.2) {
+            state.carOffsetX = 0;
+            state.carVelX = 0;
+            state.driveMode = 'cruising';
+            syncCarStatusUI();
+          }
+        }
+
+        state.maneuverPitch += (targetPitch - state.maneuverPitch) * Math.min(1, dt * 10);
+        state.maneuverSquatY += (targetSquatY - state.maneuverSquatY) * Math.min(1, dt * 10);
+
+        const moveX = state.carOffsetX;
+        const moveY = moveX * SLOPE;
+        safeSetAttr(carMaster, 'transform', 'translate(' + moveX.toFixed(2) + ', ' + moveY.toFixed(2) + ')');
+      }
+
+      // ==================== ЛОГИКА ВИКТОРИНЫ ====================
+      function renderQuestion() {
+        const qIndex = state.currentQuestionIndex;
+        const qObj = QUESTIONS[qIndex];
+
+        state.selectedOption = state.userAnswers[qIndex];
+        state.isAnswered = false;
+
+        // Плавно задаем целевую скорость для текущего вопроса (каждый следующий вопрос быстрее!)
+        state.targetSpeedKmh = qObj.speedKmh;
+        applyLightState();
+
+        // Обновляем верхнюю плашку и прогресс-бар
+        questionCounter.textContent = 'ВОПРОС ' + (qIndex + 1);
+        const progressPct = ((qIndex + 1) / QUESTIONS.length) * 100;
+        progressBar.style.width = progressPct + '%';
+
+        // Текст вопроса
+        questionText.textContent = qObj.question;
+
+        // Варианты ответов A, B, C, D
+        const letters = ['A', 'B', 'C', 'D'];
+        optionBtns.forEach(function (btn, idx) {
+          const letterEl = btn.querySelector('.opt-letter');
+          const labelEl = btn.querySelector('.opt-label');
+          if (letterEl) letterEl.textContent = letters[idx];
+          if (labelEl) labelEl.textContent = qObj.options[idx];
+          btn.disabled = false;
+        });
+
+        updateOptionStyles();
+
+        if (qIndex === QUESTIONS.length - 1) {
+          feedbackBar.textContent = '🌙 Ночной финальный раунд (300 км/ч)! Выберите ответ';
+          feedbackBar.className = 'min-h-[22px] mt-2 mb-2 text-center text-[12px] font-bold text-amber-600 transition-opacity duration-200';
+        } else {
+          feedbackBar.textContent = 'Скорость: ' + qObj.speedKmh + ' км/ч • Выберите вариант ответа';
+          feedbackBar.className = 'min-h-[22px] mt-2 mb-2 text-center text-[12px] font-semibold text-stone-500 transition-opacity duration-200';
+        }
+
+        submitBtn.textContent = 'ОТВЕТИТЬ';
+        submitBtn.disabled = false;
+      }
+
+      function updateOptionStyles() {
+        const qObj = QUESTIONS[state.currentQuestionIndex];
+        optionBtns.forEach(function (btn, idx) {
+          const isSelected = state.selectedOption === idx;
+
+          if (!state.isAnswered) {
+            if (isSelected) {
+              // Точно как карточка B AUDI в 51.png: оранжевая рамка 2px
+              btn.className = 'option-btn group text-left rounded-[12px] border-2 border-[#F18121] bg-orange-50/20 p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150 shadow-[0_4px_12px_rgba(241,129,33,0.12)]';
+            } else {
+              btn.className = 'option-btn group text-left rounded-[12px] border-[1.5px] border-[#E2E2E2] bg-white p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150 hover:border-[#F18121]/60 active:scale-[0.98]';
+            }
+          } else {
+            // После нажатия ОТВЕТИТЬ показываем правильный/неправильный вариант
+            if (idx === qObj.correct) {
+              btn.className = 'option-btn group text-left rounded-[12px] border-2 border-emerald-500 bg-emerald-50/70 p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150';
+            } else if (isSelected && idx !== qObj.correct) {
+              btn.className = 'option-btn group text-left rounded-[12px] border-2 border-rose-500 bg-rose-50/70 p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150';
+            } else {
+              btn.className = 'option-btn group text-left rounded-[12px] border-[1.5px] border-[#E2E2E2] bg-white opacity-55 p-3.5 h-[112px] sm:h-[118px] flex flex-col justify-start transition-all duration-150';
+            }
+          }
+        });
+      }
+
+      let advanceTimer = null;
+
+      function selectOption(idx) {
+        if (state.isAnswered || state.quizCompleted) return;
+        state.selectedOption = idx;
+        playUiSound('select');
+        updateOptionStyles();
+      }
+
+      function handleAnswerSubmit() {
+        if (state.quizCompleted) return;
+
+        // Если ответ уже проверен и пользователь нажал кнопку повторно — мгновенный переход дальше
+        if (state.isAnswered) {
+          if (advanceTimer) {
+            clearTimeout(advanceTimer);
+            advanceTimer = null;
+          }
+          proceedToNextStep();
+          return;
+        }
+
+        if (state.selectedOption === null) {
+          quizCard.classList.remove('shake-anim');
+          void quizCard.offsetWidth;
+          quizCard.classList.add('shake-anim');
+          feedbackBar.textContent = 'Пожалуйста, выберите один из 4 вариантов (A, B, C или D)';
+          feedbackBar.className = 'min-h-[22px] mt-2 mb-2 text-center text-[12px] font-bold text-rose-600 transition-opacity duration-200';
+          playUiSound('wrong');
+          return;
+        }
+
+        state.isAnswered = true;
+        state.userAnswers[state.currentQuestionIndex] = state.selectedOption;
+
+        const qObj = QUESTIONS[state.currentQuestionIndex];
+        const isCorrect = state.selectedOption === qObj.correct;
+
+        updateOptionStyles();
+
+        if (isCorrect) {
+          playUiSound('correct');
+          feedbackBar.textContent = '✓ Верно! Автомобиль набирает обороты...';
+          feedbackBar.className = 'min-h-[22px] mt-2 mb-2 text-center text-[12px] font-bold text-emerald-600 transition-opacity duration-200';
+        } else {
+          playUiSound('wrong');
+          const letters = ['A', 'B', 'C', 'D'];
+          feedbackBar.textContent = '✕ Неверно. Правильный ответ: ' + letters[qObj.correct] + ' (' + qObj.options[qObj.correct] + ')';
+          feedbackBar.className = 'min-h-[22px] mt-2 mb-2 text-center text-[12px] font-bold text-rose-600 transition-opacity duration-200';
+        }
+
+        // Сразу прибавляем скорость к следующему раунду, чтобы игрок ощутил разгон
+        if (state.currentQuestionIndex < QUESTIONS.length - 1) {
+          state.targetSpeedKmh = QUESTIONS[state.currentQuestionIndex + 1].speedKmh;
+          submitBtn.textContent = 'ДАЛЕЕ →';
+          advanceTimer = setTimeout(function () {
+            advanceTimer = null;
+            proceedToNextStep();
+          }, 950);
+        } else {
+          submitBtn.textContent = 'ФИНИШ 🏁';
+          advanceTimer = setTimeout(function () {
+            advanceTimer = null;
+            proceedToNextStep();
+          }, 950);
+        }
+      }
+
+      function proceedToNextStep() {
+        if (state.currentQuestionIndex < QUESTIONS.length - 1) {
+          state.currentQuestionIndex++;
+          renderQuestion();
+        } else {
+          finishQuizAndDepartCar();
+        }
+      }
+
+      function finishQuizAndDepartCar() {
+        state.quizCompleted = true;
+        applyLightState();
+        playUiSound('finish');
+
+        // Автомобиль резко уезжает за кадр после ответа на все 10 вопросов!
+        departCarOffscreen();
+
+        if (departureBanner) {
+          departureBanner.classList.remove('hidden');
+        }
+
+        // Показываем карточку результатов
+        quizCard.classList.add('hidden');
+        resultCard.classList.remove('hidden');
+        resultCard.classList.add('flex');
+        questionCounter.textContent = 'ФИНИШ';
+
+        renderResultsSummary();
+      }
+
+      function renderResultsSummary() {
+        let correctCount = 0;
+        answersSummaryList.innerHTML = '';
+
+        QUESTIONS.forEach(function (q, idx) {
+          const userAns = state.userAnswers[idx];
+          const ok = userAns === q.correct;
+          if (ok) correctCount++;
+
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between text-[11px] py-1 px-2 rounded bg-white border border-stone-200/80';
+          const statusColor = ok ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold';
+          const userText = userAns !== null ? q.options[userAns] : '—';
+          row.innerHTML =
+            '<span class="font-semibold text-stone-700 truncate max-w-[62%]">' + (idx + 1) + '. ' + q.question + '</span>' +
+            '<span class="' + statusColor + ' shrink-0 ml-2">' + (ok ? '✓ ' : '✕ ') + userText + '</span>';
+          answersSummaryList.appendChild(row);
+        });
+
+        const pct = Math.round((correctCount / QUESTIONS.length) * 100);
+        finalScoreVal.textContent = correctCount + ' / ' + QUESTIONS.length;
+        finalAccuracyVal.textContent = pct + '%';
+
+        if (correctCount >= 9) {
+          resultRankText.textContent = '🏆 Легенда автоспорта! Безупречное знание автомобильного мира.';
+        } else if (correctCount >= 7) {
+          resultRankText.textContent = '🔥 Опытный пилот! Отличный результат на скорости 300 км/ч.';
+        } else if (correctCount >= 4) {
+          resultRankText.textContent = '👍 Уверенный водитель! Хорошая база, но можно разогнаться еще быстрее.';
+        } else {
+          resultRankText.textContent = '🔧 Начинающий автомобилист! Попробуйте пройти трассу еще раз.';
+        }
+      }
+
+      function restartQuiz() {
+        if (advanceTimer) {
+          clearTimeout(advanceTimer);
+          advanceTimer = null;
+        }
+        state.currentQuestionIndex = 0;
+        state.selectedOption = null;
+        state.isAnswered = false;
+        state.userAnswers = new Array(QUESTIONS.length).fill(null);
+        state.quizCompleted = false;
+        state.targetSpeedKmh = QUESTIONS[0].speedKmh;
+
+        if (departureBanner) {
+          departureBanner.classList.add('hidden');
+        }
+
+        // Возвращаем автомобиль в кадр, если он был за пределами экрана
+        if (state.driveMode === 'away' || state.driveMode === 'departing') {
+          returnCarToFrame();
+        }
+
+        resultCard.classList.add('hidden');
+        resultCard.classList.remove('flex');
+        quizCard.classList.remove('hidden');
+
+        renderQuestion();
+      }
+
+      function handleBackButton() {
+        if (advanceTimer) {
+          clearTimeout(advanceTimer);
+          advanceTimer = null;
+        }
+        if (state.quizCompleted) {
+          restartQuiz();
+          return;
+        }
+        if (state.currentQuestionIndex > 0) {
+          state.currentQuestionIndex--;
+          renderQuestion();
+        } else {
+          // Если мы на 1-м вопросе, сбрасываем выбор
+          state.selectedOption = null;
+          state.isAnswered = false;
+          updateOptionStyles();
+          feedbackBar.textContent = 'Вы на первом вопросе (60 км/ч). Выберите вариант ответа';
+          feedbackBar.className = 'min-h-[22px] mt-2 mb-2 text-center text-[12px] font-semibold text-stone-500 transition-opacity duration-200';
+        }
+      }
+
+      // ==================== ОБРАБОТЧИКИ СОБЫТИЙ ====================
+      optionBtns.forEach(function (btn, idx) {
+        btn.addEventListener('click', function () {
+          selectOption(idx);
+        });
+      });
+
+      submitBtn.addEventListener('click', handleAnswerSubmit);
+      backBtn.addEventListener('click', handleBackButton);
+      muteBtn.addEventListener('click', toggleSound);
+      restartBtn.addEventListener('click', restartQuiz);
+
+      toggleCarReturnBtn.addEventListener('click', function () {
+        toggleCarManeuverManual();
+      });
+
+      function openSettingsModal(tab) {
+        settingsModal.classList.remove('hidden');
+        if (tab === 'cicd') {
+          switchModalTab('cicd');
+        } else {
+          switchModalTab('settings');
+        }
+      }
+
+      function closeSettingsModal() {
+        settingsModal.classList.add('hidden');
+      }
+
+      function switchModalTab(tab) {
+        if (tab === 'cicd') {
+          tabCicdContent.classList.remove('hidden');
+          tabSettingsContent.classList.add('hidden');
+          tabCicdBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#F18121] text-white transition';
+          tabSettingsBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-700 hover:bg-stone-200 transition';
+        } else {
+          tabSettingsContent.classList.remove('hidden');
+          tabCicdContent.classList.add('hidden');
+          tabSettingsBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#F18121] text-white transition';
+          tabCicdBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-700 hover:bg-stone-200 transition';
+        }
+      }
+
+      settingsBtn.addEventListener('click', function () {
+        openSettingsModal('settings');
+      });
+      openCiFromResultsBtn.addEventListener('click', function () {
+        openSettingsModal('cicd');
+      });
+      closeSettingsBtn.addEventListener('click', closeSettingsModal);
+      doneSettingsBtn.addEventListener('click', closeSettingsModal);
+      tabSettingsBtn.addEventListener('click', function () {
+        switchModalTab('settings');
+      });
+      tabCicdBtn.addEventListener('click', function () {
+        switchModalTab('cicd');
+      });
+
+      modalSoundToggle.addEventListener('click', toggleSound);
+
+      bounceRange.addEventListener('input', function (e) {
+        const val = Number(e.target.value);
+        state.bounceScale = val / 100;
+        bounceValLabel.textContent = val + '%';
+      });
+
+      lightmodeBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          state.lightModeOverride = btn.getAttribute('data-lightmode') || 'auto';
+          lightmodeBtns.forEach(function (b) {
+            const active = b.getAttribute('data-lightmode') === state.lightModeOverride;
+            b.className = active
+              ? 'lightmode-btn py-2 rounded-lg text-xs font-bold border-2 border-[#F18121] bg-orange-50 text-[#F18121]'
+              : 'lightmode-btn py-2 rounded-lg text-xs font-bold border border-stone-200 text-stone-600';
+          });
+          applyLightState();
+        });
+      });
+
+      modalDriveBtn.addEventListener('click', function () {
+        toggleCarManeuverManual();
+      });
+
+      modalFullscreenBtn.addEventListener('click', function () {
+        state.fullScreenShell = !state.fullScreenShell;
+        if (state.fullScreenShell) {
+          appShell.className = 'relative w-full h-full overflow-hidden flex flex-col justify-between transition-all duration-300 bg-[#CCA36E]';
+        } else {
+          appShell.className = 'relative w-full h-full sm:max-w-[420px] sm:h-[min(96vh,875px)] sm:rounded-[34px] sm:shadow-[0_28px_80px_rgba(0,0,0,0.75)] sm:border-[5px] sm:border-stone-800/90 overflow-hidden flex flex-col justify-between transition-all duration-300 bg-[#CCA36E]';
+        }
+      });
+
+      copyWorkflowBtn.addEventListener('click', function () {
+        const code = workflowCodeBlock ? workflowCodeBlock.textContent : '';
+        if (!code) return;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          copyWorkflowBtn.textContent = '✓ Скопировано!';
+          setTimeout(function () {
+            copyWorkflowBtn.textContent = 'Копировать YAML';
+          }, 1800);
+        } catch (e) {}
+      });
+
+      // Поддержка клавиатуры (A/B/C/D или 1/2/3/4 + Enter)
+      window.addEventListener('keydown', function (e) {
+        if (!settingsModal.classList.contains('hidden')) {
+          if (e.key === 'Escape') closeSettingsModal();
+          return;
+        }
+        const k = e.key ? e.key.toLowerCase() : '';
+        if (k === '1' || k === 'a' || k === 'ф') selectOption(0);
+        else if (k === '2' || k === 'b' || k === 'и') selectOption(1);
+        else if (k === '3' || k === 'c' || k === 'с') selectOption(2);
+        else if (k === '4' || k === 'd' || k === 'в') selectOption(3);
+        else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleAnswerSubmit();
+        }
+      });
+
+      // ==================== ГЛАВНЫЙ ЦИКЛ АНИМАЦИИ (60 FPS) ====================
+      let lastTimestamp = performance.now();
+
+      function animate(now) {
+        try {
+          const rawDt = (now - lastTimestamp) / 1000;
+          const dt = Math.min(Math.max(rawDt, 0.001), 0.05) || 0.016;
+          lastTimestamp = now;
+          state.time += dt;
+
+          // Плавный разгон/торможение до целевой скорости текущего вопроса
+          state.speedKmh += (state.targetSpeedKmh - state.speedKmh) * Math.min(1, dt * 3.8);
+          if (speedIndicatorText) {
+            speedIndicatorText.textContent = Math.round(state.speedKmh) + ' КМ/Ч';
+          }
+
+          // Обновляем маневр выезда за кадр / возврата
+          updateCarManeuver(dt);
+
+          const speedMult = state.speedKmh / 50;
+          const speedNorm = state.speedKmh / 90;
+          const maneuverWheelBoost = Math.abs(state.carVelX) / 310;
+          const effectiveWheelSpeed = speedNorm + maneuverWheelBoost;
+
+          // 1. Многослойный параллакс леса и дороги
+          const baseScrollSpeed = 310 * speedNorm;
+          state.scrollFar = (state.scrollFar + baseScrollSpeed * 0.38 * dt) % LOOP_WIDTH;
+          state.scrollMid = (state.scrollMid + baseScrollSpeed * 0.74 * dt) % LOOP_WIDTH;
+          state.scrollFront = (state.scrollFront + baseScrollSpeed * 1.0 * dt) % LOOP_WIDTH;
+          state.scrollRoad = (state.scrollRoad + baseScrollSpeed * 1.45 * dt) % LOOP_WIDTH;
+
+          updateLayerPosition(farLayer, state.scrollFar);
+          updateLayerPosition(shadowsMidLayer, state.scrollMid);
+          updateLayerPosition(midLayer, state.scrollMid);
+          updateLayerPosition(shadowsFrontLayer, state.scrollFront);
+          updateLayerPosition(frontLayer, state.scrollFront);
+          updateLayerPosition(grassLayer, state.scrollFront);
+          updateLayerPosition(roadLayer, state.scrollRoad);
+
+          // 2. Вращение колес и работа подвески
+          if (state.driveMode !== 'away') {
+            state.wheelAngle = (state.wheelAngle - dt * 11.5 * effectiveWheelSpeed) % (Math.PI * 2);
+            const deg = (state.wheelAngle * 180) / Math.PI;
+            safeSetAttr(frontSpinner, 'transform', 'rotate(' + deg.toFixed(1) + ')');
+            safeSetAttr(rearSpinner, 'transform', 'rotate(' + (deg * 1.12).toFixed(1) + ')');
+
+            const effectiveMult = speedMult + maneuverWheelBoost * 1.8;
+            const blurRatio = Math.max(0, Math.min(0.85, (effectiveMult - 2.2) / 2.8));
+            const roundedBlur = Math.round(blurRatio * 100) / 100;
+
+            if (roundedBlur !== state.lastBlurOpacity) {
+              safeSetAttr(frontWheelBlur, 'opacity', roundedBlur.toFixed(2));
+              safeSetAttr(rearWheelBlur, 'opacity', roundedBlur.toFixed(2));
+              state.lastBlurOpacity = roundedBlur;
+            }
+            if (roundedBlur > 0) {
+              safeSetAttr(frontWheelBlur, 'transform', 'rotate(' + (-deg * 0.6).toFixed(1) + ')');
+              safeSetAttr(rearWheelBlur, 'transform', 'rotate(' + (-deg * 0.7).toFixed(1) + ')');
+            }
+
+            // Физика подвески
+            const waveFreq = 3.2 + Math.min(speedNorm, 3.2) * 2.4;
+            const roadWaveFront = Math.sin(state.time * waveFreq) * 0.72 + Math.sin(state.time * waveFreq * 2.15 + 0.9) * 0.28;
+            const roadWaveRear = Math.sin(state.time * waveFreq - 0.72) * 0.72 + Math.sin(state.time * waveFreq * 2.15 + 0.15) * 0.28;
+            const engineMicroVib = Math.sin(state.time * (38 + speedMult * 6)) * 0.18;
+
+            const highSpeedDamping = speedMult > 2.5 ? Math.max(0.68, 1 - (speedMult - 2.5) * 0.08) : 1.0;
+            const aeroSquatY = Math.min(1.2, speedMult * 0.2) + state.maneuverSquatY;
+            const travelAmp = (1.2 + Math.min(speedNorm, 1.8) * 0.48) * highSpeedDamping * state.bounceScale;
+
+            const suspFrontY = roadWaveFront * travelAmp + engineMicroVib * state.bounceScale + aeroSquatY;
+            const suspRearY = roadWaveRear * travelAmp * 0.9 + engineMicroVib * state.bounceScale + aeroSquatY * 1.1;
+
+            const chassisHeaveY = (suspFrontY + suspRearY) * 0.5;
+            const chassisPitchDeg = (suspRearY - suspFrontY) * 0.085 + state.maneuverPitch;
+
+            const frontTireCompression = (suspFrontY - aeroSquatY) * 0.24;
+            const rearTireCompression = (suspRearY - aeroSquatY) * 0.24;
+
+            safeSetAttr(wheelFront, 'transform', 'translate(0, ' + frontTireCompression.toFixed(2) + ')');
+            safeSetAttr(wheelRear, 'transform', 'translate(0, ' + rearTireCompression.toFixed(2) + ')');
+            safeSetAttr(wheelFrontRight, 'transform', 'translate(0, ' + (frontTireCompression * 0.8).toFixed(2) + ')');
+
+            const bodyTransform = 'translate(0, ' + chassisHeaveY.toFixed(2) + ') rotate(' + chassisPitchDeg.toFixed(3) + ', 660, 560)';
+            safeSetAttr(carBody, 'transform', bodyTransform);
+            safeSetAttr(carUnderbody, 'transform', bodyTransform);
+
+            const shadowScale = 1 - chassisHeaveY * 0.0018;
+            safeSetAttr(
+              carShadow,
+              'transform',
+              'translate(485, 620) scale(' + shadowScale.toFixed(4) + ', ' + shadowScale.toFixed(4) + ') translate(-485, -620)'
+            );
+
+            updateEngineAudio(state.speedKmh, chassisHeaveY);
+          } else {
+            updateEngineAudio(state.speedKmh, 0);
+          }
+
+          // 3. Мерцание звезд в ночном режиме
+          if (state.lightsOn && nightStars) {
+            const starPulse = 0.82 + Math.sin(state.time * 2.6) * 0.18;
+            safeSetAttr(nightStars, 'opacity', starPulse.toFixed(2));
+          }
+
+          // 4. Частицы дорожной пыли
+          updateDust(dt, speedNorm);
+        } catch (err) {}
+
+        requestAnimationFrame(animate);
+      }
+
+      // Инициализация первого вопроса и запуск цикла
+      renderQuestion();
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>

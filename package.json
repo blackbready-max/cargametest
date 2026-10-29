@@ -1,0 +1,19 @@
+{
+  "name": "retro-auto-quiz-mobile",
+  "version": "1.0.0",
+  "description": "Мобильная игра-викторина АВТО с анимированным ретро-маслкаром на фоне",
+  "private": true,
+  "scripts": {
+    "start": "npx serve www",
+    "cap:init": "npx cap add android",
+    "cap:sync": "npx cap sync android",
+    "build:apk": "npx cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "АВТО — Мобильная Игра-Викторина",
+  "short_name": "АвтоКвиз",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#18352D",
+  "theme_color": "#F18121"
+}
